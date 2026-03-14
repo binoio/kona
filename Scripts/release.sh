@@ -5,15 +5,19 @@
 #
 # Prerequisites:
 #   - Apple Developer ID Application certificate in keychain
-#   - App Store Connect API key configured for notarytool
 #   - gh CLI authenticated
+#   - App-specific password from appleid.apple.com (under Sign-In and Security)
 #
-# Environment variables:
+# The script will:
+#   - Auto-detect Developer ID certificate and derive Team ID
+#   - Prompt for Apple ID and app-specific password if not provided
+#
+# Environment variables (optional, will prompt if missing):
 #   DEVELOPER_ID     - Developer ID for code signing (default: auto-detect)
 #   APPLE_ID         - Apple ID for notarization
-#   TEAM_ID          - Apple Developer Team ID
-#   APP_PASSWORD     - App-specific password for notarization (or use keychain profile)
-#   KEYCHAIN_PROFILE - Notarytool keychain profile name (alternative to APPLE_ID/APP_PASSWORD)
+#   TEAM_ID          - Apple Developer Team ID (default: derived from certificate)
+#   APP_PASSWORD     - App-specific password for notarization
+#   KEYCHAIN_PROFILE - Notarytool keychain profile name (skips prompts)
 #
 # Usage:
 #   ./Scripts/release.sh <version>
@@ -241,29 +245,63 @@ else
     ZIP_PATH="$BUILD_DIR/${APP_NAME}-${VERSION}.zip"
     ditto -c -k --keepParent "$BUNDLE_DIR" "$ZIP_PATH"
     
+    # Derive Team ID from Developer ID certificate if not set
+    if [[ -z "$TEAM_ID" && -n "$DEVELOPER_ID" ]]; then
+        # Extract Team ID from certificate name (e.g., "Developer ID Application: Name (TEAM_ID)")
+        TEAM_ID=$(echo "$DEVELOPER_ID" | sed -n 's/.*(\([A-Z0-9]*\))$/\1/p')
+        if [[ -n "$TEAM_ID" ]]; then
+            log_info "Derived Team ID from certificate: $TEAM_ID"
+        fi
+    fi
+    
+    # Interactive prompts for missing credentials
+    if [[ -z "$KEYCHAIN_PROFILE" && (-z "$APPLE_ID" || -z "$APP_PASSWORD") ]]; then
+        echo ""
+        log_info "Notarization credentials required."
+        echo ""
+        
+        # Prompt for Apple ID if not set
+        if [[ -z "$APPLE_ID" ]]; then
+            echo -n "Enter your Apple ID (email): "
+            read -r APPLE_ID
+            if [[ -z "$APPLE_ID" ]]; then
+                log_error "Apple ID is required for notarization."
+            fi
+        fi
+        
+        # Prompt for app-specific password if not set
+        if [[ -z "$APP_PASSWORD" ]]; then
+            echo -n "Enter app-specific password: "
+            read -rs APP_PASSWORD
+            echo ""
+            if [[ -z "$APP_PASSWORD" ]]; then
+                log_error "App-specific password is required for notarization."
+            fi
+        fi
+        
+        echo ""
+    fi
+    
     if [[ -n "$KEYCHAIN_PROFILE" ]]; then
         log_info "Notarizing with keychain profile: $KEYCHAIN_PROFILE"
         xcrun notarytool submit "$ZIP_PATH" \
             --keychain-profile "$KEYCHAIN_PROFILE" \
             --wait
     elif [[ -n "$APPLE_ID" && -n "$TEAM_ID" && -n "$APP_PASSWORD" ]]; then
-        log_info "Notarizing with Apple ID credentials..."
+        log_info "Notarizing with Apple ID: $APPLE_ID (Team: $TEAM_ID)..."
         xcrun notarytool submit "$ZIP_PATH" \
             --apple-id "$APPLE_ID" \
             --team-id "$TEAM_ID" \
             --password "$APP_PASSWORD" \
             --wait
     else
-        log_warning "No notarization credentials found. Skipping notarization."
-        log_warning "Set KEYCHAIN_PROFILE or (APPLE_ID, TEAM_ID, APP_PASSWORD) to enable."
+        log_error "Missing notarization credentials. Need APPLE_ID, TEAM_ID, and APP_PASSWORD."
     fi
     
     # Staple the notarization ticket
-    if [[ -n "$KEYCHAIN_PROFILE" || (-n "$APPLE_ID" && -n "$TEAM_ID" && -n "$APP_PASSWORD") ]]; then
-        log_info "Stapling notarization ticket..."
-        xcrun stapler staple "$BUNDLE_DIR"
-        log_success "Notarization complete"
-    fi
+    log_info "Stapling notarization ticket..."
+    xcrun stapler staple "$BUNDLE_DIR"
+    log_success "Notarization complete"
 fi
 
 # ============================================================================

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kona - Keep Your Mac Awake</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --accent: #e94560;
+            --text: #eaeaea;
+            --text-muted: #a0a0a0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-color);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 4rem 0;
+        }
+        
+        .logo {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tagline {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+        
+        .badges {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+        
+        .badge {
+            background: var(--card-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--text-muted);
+        }
+        
+        .features {
+            padding: 4rem 0;
+        }
+        
+        .features h2 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 2rem;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .feature-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card h3 {
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+        
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+        
+        .install {
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: 16px;
+            margin: 2rem 0;
+        }
+        
+        .install h2 {
+            margin-bottom: 1.5rem;
+        }
+        
+        pre {
+            background: var(--bg-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        code {
+            color: var(--accent);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            color: var(--text-muted);
+        }
+        
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            header {
+                padding: 2rem 0;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .logo {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">☕</div>
+            <h1>Kona</h1>
+            <p class="tagline">Keep your Mac awake, your way</p>
+            
+            <div class="badges">
+                <span class="badge">macOS 14+</span>
+                <span class="badge">Swift 5.9</span>
+                <span class="badge">Menu Bar App</span>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="https://github.com/mabino/kona/releases/latest" class="btn btn-primary">
+                    Download Latest
+                </a>
+                <a href="https://github.com/mabino/kona" class="btn btn-secondary">
+                    View on GitHub
+                </a>
+            </div>
+        </header>
+        
+        <section class="features">
+            <h2>Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Wake States</h3>
+                    <p>Create named profiles with custom settings to prevent sleep exactly how you want.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">⏱️</div>
+                    <h3>Flexible Durations</h3>
+                    <p>Choose from 15 min to 8 hours, or keep your Mac awake indefinitely.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🖥️</div>
+                    <h3>Screen Control</h3>
+                    <p>Independently control screen dimming and system lock behavior.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📅</div>
+                    <h3>Scheduling</h3>
+                    <p>Set recurring schedules with specific days and time windows.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">☕</div>
+                    <h3>Menu Bar</h3>
+                    <p>Quick access from your menu bar. One click to toggle wake states.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Launch Options</h3>
+                    <p>Open at login and auto-activate your preferred wake state.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="install">
+            <h2>Quick Install</h2>
+            <pre><code># Clone and build
+git clone https://github.com/mabino/kona.git
+cd kona
+swift build --configuration release
+./Scripts/build.sh
+
+# App bundle created at .build/arm64-apple-macosx/release/Kona.app</code></pre>
+        </section>
+        
+        <footer>
+            <p>
+                Made with ☕ by <a href="https://github.com/mabino">mabino</a>
+                &nbsp;•&nbsp;
+                <a href="https://github.com/mabino/kona">GitHub</a>
+                &nbsp;•&nbsp;
+                MIT License
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

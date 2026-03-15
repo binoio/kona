@@ -221,7 +221,10 @@ class WakeStateManager: ObservableObject {
         
         if let enabled = currentEnabled {
             // Prevent sleep based on options
-            let options: ProcessInfo.ActivityOptions = enabled.options.allowScreenDim ? [] : [.idleDisplaySleepDisabled]
+            var options: ProcessInfo.ActivityOptions = [.idleSystemSleepDisabled]
+            if !enabled.options.allowScreenDim {
+                options.insert(.idleDisplaySleepDisabled)
+            }
             // For system lock, more complex, but for now, assume idleDisplaySleepDisabled prevents lock too
             activity = ProcessInfo.processInfo.beginActivity(options: options, reason: "Kona Wake State: \(enabled.name)")
             print("Preventing sleep for \(enabled.name)")

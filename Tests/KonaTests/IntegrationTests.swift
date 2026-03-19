@@ -211,6 +211,43 @@ final class IntegrationTests: XCTestCase {
         XCTAssertEqual(manager.currentEnabled?.id, launchState.id, "currentEnabled should be the launch wake state")
     }
     
+    func testTimeRemainingInMenuBar() {
+        // Enable setting
+        SettingsManager.shared.showRemainingTimeInMenuBar = true
+        
+        // Add custom state with 15min duration
+        let custom = WakeState(name: "TimedState", options: WakeState.StateOptions(allowScreenDim: true, allowSystemLock: true), duration: .fifteenMinutes)
+        manager.addWakeState(custom)
+        
+        // Enable it
+        manager.enableWakeState(custom)
+        
+        // Update menu icon (this happens automatically but we call it manually to be sure)
+        appDelegate.updateMenuBarIcon()
+        
+        // Verify title contains time
+        // 15 minutes = 15:00 or 14:59
+        let initialTitle = appDelegate.statusItem?.button?.title ?? ""
+        XCTAssertTrue(initialTitle.contains("15:00") || initialTitle.contains("14:59"), "Menu bar title should contain 15:00 or 14:59, got: '\(initialTitle)'")
+        
+        // Manually set enabledAt to simulate time passing
+        if let idx = manager.wakeStates.firstIndex(where: { $0.id == custom.id }) {
+            manager.wakeStates[idx].enabledAt = Date().addingTimeInterval(-61) // 1 minute and 1 second ago
+            manager.currentEnabled = manager.wakeStates[idx]
+        }
+        
+        appDelegate.updateMenuBarIcon()
+        
+        // Should show ~13:58 or 13:59
+        let title = appDelegate.statusItem?.button?.title ?? ""
+        XCTAssertTrue(title.contains("13:5"), "Menu bar title should show ~13:5x, got: '\(title)'")
+        
+        // Disable setting and verify title is cleared
+        SettingsManager.shared.showRemainingTimeInMenuBar = false
+        appDelegate.updateMenuBarIcon()
+        XCTAssertEqual(appDelegate.statusItem?.button?.title, "", "Menu bar title should be empty when setting is disabled")
+    }
+    
     func testNoLaunchWakeStateWhenNotConfigured() {
         // Ensure no launch wake state is configured
         SettingsManager.shared.launchWakeStateId = nil

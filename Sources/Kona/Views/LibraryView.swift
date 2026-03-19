@@ -136,5 +136,6 @@ struct LibraryView: View {
             columnVisibility = newValue ? .all : .detailOnly
         }
         .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 450, idealWidth: 550, minHeight: 300, idealHeight: 400)
     }
 }

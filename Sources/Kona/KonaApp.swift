@@ -63,6 +63,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var settingsWindow: NSWindow?
     var cancellables = Set<AnyCancellable>()
+    var displayTimer: Timer?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
@@ -76,12 +77,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Open at login logic handled in SettingsManager
         let settings = SettingsManager.shared
-        if !settings.hasLaunched || settings.openNewDocumentOnLaunch {
-            // Open new Wake State window or something
+        if !settings.hasLaunched {
             // For now, perhaps open the library
             NSApp.windows.first?.makeKeyAndOrderFront(nil)
         }
         settings.hasLaunched = true
+        
+        // Start a timer to update time remaining in the menu bar if needed
+        displayTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.updateMenuBarIcon()
+        }
         
         // Activate launch wake state if configured
         if let launchId = settings.launchWakeStateId,
@@ -162,9 +167,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func updateMenuBarIcon() {
-        if let button = statusItem?.button {
-            let isEnabled = WakeStateManager.shared.currentEnabled != nil
-            button.image = NSImage(systemSymbolName: isEnabled ? "cup.and.saucer.fill" : "cup.and.saucer", accessibilityDescription: isEnabled ? "Kona Enabled" : "Kona Disabled")
+        guard let button = statusItem?.button else { return }
+        
+        let current = WakeStateManager.shared.currentEnabled
+        let isEnabled = current != nil
+        button.image = NSImage(systemSymbolName: isEnabled ? "cup.and.saucer.fill" : "cup.and.saucer", accessibilityDescription: isEnabled ? "Kona Enabled" : "Kona Disabled")
+        
+        if SettingsManager.shared.showRemainingTimeInMenuBar,
+           let state = current,
+           let enabledAt = state.enabledAt,
+           let duration = state.duration.timeInterval {
+            let elapsed = Date().timeIntervalSince(enabledAt)
+            let remaining = max(0, duration - elapsed)
+            let hours = Int(remaining) / 3600
+            let minutes = (Int(remaining) % 3600) / 60
+            let seconds = Int(remaining) % 60
+            
+            let timeString: String
+            if hours > 0 {
+                timeString = String(format: "%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                timeString = String(format: "%d:%02d", minutes, seconds)
+            }
+            button.title = " \(timeString)"
+        } else {
+            button.title = ""
         }
     }
     
@@ -176,7 +203,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsWindow == nil {
             let settingsView = SettingsView()
             settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                contentRect: NSRect(x: 0, y: 0, width: 450, height: 300),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false

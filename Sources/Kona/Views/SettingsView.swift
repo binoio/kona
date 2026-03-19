@@ -14,8 +14,8 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Toggle("Show menu bar item", isOn: $settings.showMenuBarItem)
+            Toggle("Show remaining time in menu bar", isOn: $settings.showRemainingTimeInMenuBar)
             Toggle("Open at login", isOn: $settings.openAtLogin)
-            Toggle("Open new Wake State document on launch", isOn: $settings.openNewDocumentOnLaunch)
             
             Picker("Activate on launch", selection: $settings.launchWakeStateId) {
                 Text("None").tag(nil as UUID?)
@@ -25,6 +25,6 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 350, height: 180)
+        .frame(width: 450, height: 180)
     }
 }

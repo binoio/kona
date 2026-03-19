@@ -10,15 +10,15 @@ class SettingsManager: ObservableObject {
             UserDefaults.standard.set(showMenuBarItem, forKey: "showMenuBarItem")
         }
     }
+    @Published var showRemainingTimeInMenuBar: Bool {
+        didSet {
+            UserDefaults.standard.set(showRemainingTimeInMenuBar, forKey: "showRemainingTimeInMenuBar")
+        }
+    }
     @Published var openAtLogin: Bool {
         didSet {
             UserDefaults.standard.set(openAtLogin, forKey: "openAtLogin")
             updateLoginItem()
-        }
-    }
-    @Published var openNewDocumentOnLaunch: Bool {
-        didSet {
-            UserDefaults.standard.set(openNewDocumentOnLaunch, forKey: "openNewDocumentOnLaunch")
         }
     }
     @Published var hasLaunched: Bool {
@@ -41,8 +41,8 @@ class SettingsManager: ObservableObject {
         if UserDefaults.standard.object(forKey: "showMenuBarItem") == nil {
             showMenuBarItem = true
         }
+        showRemainingTimeInMenuBar = UserDefaults.standard.bool(forKey: "showRemainingTimeInMenuBar")
         openAtLogin = UserDefaults.standard.bool(forKey: "openAtLogin")
-        openNewDocumentOnLaunch = UserDefaults.standard.bool(forKey: "openNewDocumentOnLaunch")
         hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
         if let idString = UserDefaults.standard.string(forKey: "launchWakeStateId") {
             launchWakeStateId = UUID(uuidString: idString)

@@ -12,7 +12,13 @@ CONTENTS_DIR="$BUNDLE_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
-echo "Creating app bundle..."
+# Determine version
+VERSION="${APP_VERSION:-1.0}"
+if [[ -z "${APP_VERSION:-}" && -f "VERSION" ]]; then
+    VERSION=$(tr -d '[:space:]' < VERSION)
+fi
+
+echo "Creating app bundle (version $VERSION)..."
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 # Copy executable
@@ -24,7 +30,7 @@ if [ -f "Resources/AppIcon.icns" ]; then
 fi
 
 # Create Info.plist
-cat > "$CONTENTS_DIR/Info.plist" << 'EOF'
+cat > "$CONTENTS_DIR/Info.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -38,9 +44,9 @@ cat > "$CONTENTS_DIR/Info.plist" << 'EOF'
     <key>CFBundleDisplayName</key>
     <string>Kona</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>$VERSION</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>$VERSION</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleIconFile</key>

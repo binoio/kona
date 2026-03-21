@@ -15,6 +15,8 @@ final class SettingsManagerTests: XCTestCase {
         super.setUp()
         settings = SettingsManager.shared
         // Reset to default
+        settings.hideDockIcon = false
+        settings.showMenuBarItem = true
         settings.showRemainingTimeInMenuBar = false
     }
     
@@ -25,5 +27,24 @@ final class SettingsManagerTests: XCTestCase {
         
         settings.showRemainingTimeInMenuBar = false
         XCTAssertFalse(UserDefaults.standard.bool(forKey: "showRemainingTimeInMenuBar"))
+    }
+
+    func testHideDockIconPersistsAndRequiresMenuBarItem() {
+        settings.showMenuBarItem = false
+        settings.hideDockIcon = true
+
+        XCTAssertTrue(settings.hideDockIcon)
+        XCTAssertTrue(settings.showMenuBarItem)
+        XCTAssertTrue(UserDefaults.standard.bool(forKey: "hideDockIcon"))
+    }
+
+    func testDisablingMenuBarItemRestoresDockIcon() {
+        settings.hideDockIcon = true
+
+        settings.showMenuBarItem = false
+
+        XCTAssertFalse(settings.hideDockIcon)
+        XCTAssertFalse(settings.showMenuBarItem)
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: "hideDockIcon"))
     }
 }

@@ -62,13 +62,21 @@ struct KonaApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var settingsWindow: NSWindow?
+    var libraryWindow: NSWindow?
     var cancellables = Set<AnyCancellable>()
     var displayTimer: Timer?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        SettingsManager.shared.applyDockIconVisibility()
         setupMenuBar()
         // Observe any changes to WakeStateManager (including item property changes)
         WakeStateManager.shared.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.setupMenuBar()
+                self?.updateMenuBarIcon()
+            }
+        }.store(in: &cancellables)
+        SettingsManager.shared.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async {
                 self?.setupMenuBar()
                 self?.updateMenuBarIcon()
@@ -78,8 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Open at login logic handled in SettingsManager
         let settings = SettingsManager.shared
         if !settings.hasLaunched {
-            // For now, perhaps open the library
-            NSApp.windows.first?.makeKeyAndOrderFront(nil)
+            showLibrary()
         }
         settings.hasLaunched = true
         
@@ -106,6 +113,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             let menu = NSMenu()
             let indefiniteItem = NSMenuItem(title: "Indefinite Wake", action: #selector(toggleIndefiniteWake), keyEquivalent: "")
+            indefiniteItem.target = self
             if let indefinite = WakeStateManager.shared.wakeStates.first(where: { $0.name == "Indefinite" }) {
                 indefiniteItem.state = indefinite.isEnabled ? .on : .off
             }
@@ -113,12 +121,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Populate menu dynamically from saved wake states
             for state in WakeStateManager.shared.wakeStates where state.name != "Indefinite" {
                 let item = NSMenuItem(title: state.name, action: #selector(toggleWakeState(_:)), keyEquivalent: "")
+                item.target = self
                 item.state = state.isEnabled ? .on : .off
                 item.representedObject = state.id
                 menu.addItem(item)
             }
             menu.addItem(NSMenuItem.separator())
-            menu.addItem(NSMenuItem(title: "Quit Kona", action: #selector(quitApp), keyEquivalent: "q"))
+            let openLibraryItem = NSMenuItem(title: "Open Kona Library", action: #selector(openLibraryFromMenu), keyEquivalent: "")
+            openLibraryItem.target = self
+            menu.addItem(openLibraryItem)
+
+            let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettingsFromMenu), keyEquivalent: "")
+            settingsItem.target = self
+            menu.addItem(settingsItem)
+
+            menu.addItem(NSMenuItem.separator())
+            let quitItem = NSMenuItem(title: "Quit Kona", action: #selector(quitApp), keyEquivalent: "q")
+            quitItem.target = self
+            menu.addItem(quitItem)
 
             statusItem?.menu = menu
             updateMenuBarIcon()
@@ -199,11 +219,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
     
+    @objc func openLibraryFromMenu() {
+        showLibrary()
+    }
+
+    @objc func openSettingsFromMenu() {
+        showSettings()
+    }
+
+    func showLibrary() {
+        if let existingWindow = NSApp.windows.first(where: { window in
+            window !== settingsWindow && window.contentViewController != nil
+        }) {
+            present(window: existingWindow)
+            return
+        }
+
+        if libraryWindow == nil {
+            let libraryView = ContentView()
+                .environmentObject(WakeStateManager.shared)
+
+            libraryWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 900, height: 540),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            libraryWindow?.center()
+            libraryWindow?.contentView = NSHostingView(rootView: libraryView)
+            libraryWindow?.title = "Kona Library"
+            libraryWindow?.setFrameAutosaveName("KonaLibraryWindow")
+        }
+
+        present(window: libraryWindow)
+    }
+
     func showSettings() {
         if settingsWindow == nil {
             let settingsView = SettingsView()
             settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 450, height: 300),
+                contentRect: NSRect(x: 0, y: 0, width: 540, height: 440),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false
@@ -211,7 +266,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindow?.center()
             settingsWindow?.contentView = NSHostingView(rootView: settingsView)
             settingsWindow?.title = "Kona Settings"
+            settingsWindow?.setContentSize(NSSize(width: 540, height: 440))
         }
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        present(window: settingsWindow)
+    }
+
+    private func present(window: NSWindow?) {
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
     }
 }

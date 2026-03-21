@@ -1,13 +1,28 @@
+import AppKit
 import Foundation
 import ServiceManagement
 import Combine
 
 class SettingsManager: ObservableObject {
     static let shared = SettingsManager()
+    private var finishedInitializing = false
     
     @Published var showMenuBarItem: Bool {
         didSet {
+            if hideDockIcon && !showMenuBarItem {
+                hideDockIcon = false
+            }
             UserDefaults.standard.set(showMenuBarItem, forKey: "showMenuBarItem")
+        }
+    }
+    @Published var hideDockIcon: Bool {
+        didSet {
+            if hideDockIcon {
+                showMenuBarItem = true
+            }
+            UserDefaults.standard.set(hideDockIcon, forKey: "hideDockIcon")
+            guard finishedInitializing else { return }
+            applyDockIconVisibility()
         }
     }
     @Published var showRemainingTimeInMenuBar: Bool {
@@ -41,6 +56,7 @@ class SettingsManager: ObservableObject {
         if UserDefaults.standard.object(forKey: "showMenuBarItem") == nil {
             showMenuBarItem = true
         }
+        hideDockIcon = UserDefaults.standard.bool(forKey: "hideDockIcon")
         showRemainingTimeInMenuBar = UserDefaults.standard.bool(forKey: "showRemainingTimeInMenuBar")
         openAtLogin = UserDefaults.standard.bool(forKey: "openAtLogin")
         hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
@@ -49,6 +65,10 @@ class SettingsManager: ObservableObject {
         } else {
             launchWakeStateId = nil
         }
+        if hideDockIcon {
+            showMenuBarItem = true
+        }
+        finishedInitializing = true
         updateLoginItem()
     }
     
@@ -63,6 +83,15 @@ class SettingsManager: ObservableObject {
             } catch {
                 print("Failed to update login item: \(error)")
             }
+        }
+    }
+
+    func applyDockIconVisibility() {
+        guard let app = NSApp else { return }
+        let activationPolicy: NSApplication.ActivationPolicy = hideDockIcon ? .accessory : .regular
+        app.setActivationPolicy(activationPolicy)
+        if !hideDockIcon {
+            app.activate(ignoringOtherApps: true)
         }
     }
 }

@@ -19,6 +19,9 @@ final class IntegrationTests: XCTestCase {
         manager.wakeStates = []
         manager.currentEnabled = nil
         manager.createDefaultIndefinite()
+        SettingsManager.shared.hideDockIcon = false
+        SettingsManager.shared.showMenuBarItem = true
+        SettingsManager.shared.showRemainingTimeInMenuBar = false
         appDelegate = AppDelegate()
         NSApp.delegate = appDelegate
         appDelegate.setupMenuBar()
@@ -137,7 +140,12 @@ final class IntegrationTests: XCTestCase {
         
         // Get menu items (excluding separator and Quit)
         let menuItems = appDelegate.statusItem?.menu?.items ?? []
-        let wakeStateItems = menuItems.filter { !$0.isSeparatorItem && $0.title != "Quit Kona" }
+        let wakeStateItems = menuItems.filter {
+            !$0.isSeparatorItem &&
+            $0.title != "Open Kona Library" &&
+            $0.title != "Settings..." &&
+            $0.title != "Quit Kona"
+        }
         
         // Should have Indefinite Wake + 2 custom states = 3 items
         XCTAssertEqual(wakeStateItems.count, 3, "Menu should contain all wake states")
@@ -162,7 +170,12 @@ final class IntegrationTests: XCTestCase {
         
         // Get initial menu item count
         let initialItems = appDelegate.statusItem?.menu?.items ?? []
-        let initialWakeStateCount = initialItems.filter { !$0.isSeparatorItem && $0.title != "Quit Kona" }.count
+        let initialWakeStateCount = initialItems.filter {
+            !$0.isSeparatorItem &&
+            $0.title != "Open Kona Library" &&
+            $0.title != "Settings..." &&
+            $0.title != "Quit Kona"
+        }.count
         
         // Add a new wake state (this should trigger automatic menu update via observation)
         let newState = WakeState(name: "AutoUpdateTest", options: WakeState.StateOptions(allowScreenDim: true, allowSystemLock: true), duration: .indefinite)
@@ -177,7 +190,12 @@ final class IntegrationTests: XCTestCase {
         
         // Check menu WITHOUT manually calling setupMenuBar()
         let updatedItems = appDelegate.statusItem?.menu?.items ?? []
-        let updatedWakeStateCount = updatedItems.filter { !$0.isSeparatorItem && $0.title != "Quit Kona" }.count
+        let updatedWakeStateCount = updatedItems.filter {
+            !$0.isSeparatorItem &&
+            $0.title != "Open Kona Library" &&
+            $0.title != "Settings..." &&
+            $0.title != "Quit Kona"
+        }.count
         
         // Menu should now have one more item
         XCTAssertEqual(updatedWakeStateCount, initialWakeStateCount + 1, "Menu should automatically update when wake state is added")
@@ -185,6 +203,19 @@ final class IntegrationTests: XCTestCase {
         // The new state should be in the menu
         let hasNewState = updatedItems.contains { $0.title == "AutoUpdateTest" }
         XCTAssertTrue(hasNewState, "Newly added wake state should appear in menu automatically")
+    }
+
+    func testStatusMenuIncludesSettingsItem() {
+        let menuItems = appDelegate.statusItem?.menu?.items ?? []
+
+        XCTAssertTrue(menuItems.contains { $0.title == "Settings..." })
+    }
+
+    func testSettingsMenuItemOpensSettingsWindow() {
+        appDelegate.openSettingsFromMenu()
+
+        XCTAssertEqual(appDelegate.settingsWindow?.title, "Kona Settings")
+        XCTAssertTrue(appDelegate.settingsWindow?.isVisible ?? false)
     }
     
     func testLaunchWakeStateActivatesOnLaunch() {

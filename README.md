@@ -110,6 +110,18 @@ kona/
 | `Scripts/release.sh` | Build, sign, notarize (App Store Connect API), update the appcast, and publish a GitHub release |
 | `Scripts/generate_icon.swift` | Regenerate the app icon |
 
+## Releasing
+
+Shipping a release is three steps:
+
+1. Bump `VERSION` (semver; must be newer than the latest tag)
+2. Write `ReleaseNotes/Kona-X.Y.Z.md` (GitHub release body) and `ReleaseNotes/Kona-X.Y.Z.html` (embedded in the Sparkle appcast)
+3. Run `Scripts/release.sh`
+
+The script builds, signs (Developer ID, hardened runtime), notarizes and staples via the App Store Connect API, regenerates `docs/appcast.xml` with an EdDSA signature, publishes the GitHub release with the zip, and pushes the appcast — GitHub Pages then serves it to existing installs.
+
+One-time machine prerequisites (already provisioned for this project): the Developer ID Application identity and Sparkle EdDSA private key in the login Keychain, a `kona-notary` notarytool keychain profile, and an authenticated `gh` CLI.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

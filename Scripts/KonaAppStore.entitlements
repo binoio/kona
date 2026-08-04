@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Mac App Store distribution requires the App Sandbox -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- Required for App Store builds; must match the provisioning profile -->
+    <key>com.apple.application-identifier</key>
+    <string>43L352U8Y8.io.binoio.Kona</string>
+    <key>com.apple.developer.team-identifier</key>
+    <string>43L352U8Y8</string>
+    <!-- "Sleep at the end" asks System Events to sleep the Mac; pmset is
+         denied inside the sandbox. The user grants Automation consent on
+         first use. If App Review rejects this exception, remove it and hide
+         the toggle in the App Store build. -->
+    <key>com.apple.security.temporary-exception.apple-events</key>
+    <array>
+        <string>com.apple.systemevents</string>
+    </array>
+</dict>
+</plist>

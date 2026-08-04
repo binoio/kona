@@ -83,13 +83,11 @@ swift test --filter WakeStateManagerTests/testEnableWakeState
 ```
 kona/
 ├── Package.swift           # Swift Package Manager manifest
-├── Sources/Kona/
-│   ├── KonaApp.swift       # App entry point
-│   ├── Controllers/        # WakeStateManager, SettingsManager, UpdaterViewModel
-│   ├── Models/             # WakeState, Schedule, etc.
-│   └── Views/              # SwiftUI views
-├── Tests/KonaTests/        # Unit tests
-├── Scripts/                # Bundle and release scripts
+├── Sources/KonaCore/       # Shared core: models, controllers, views, base app delegate
+├── Sources/Kona/           # Developer ID shell (Sparkle auto-updates)
+├── Sources/KonaAppStore/   # Mac App Store shell (sandboxed, no Sparkle)
+├── Tests/KonaTests/        # Unit tests (target KonaCore)
+├── Scripts/                # Bundle and release scripts for both channels
 ├── ReleaseNotes/           # Per-release notes (Markdown + appcast HTML)
 ├── docs/                   # GitHub Pages site and Sparkle appcast
 └── Resources/              # App icon and assets
@@ -100,14 +98,17 @@ kona/
 - **WakeStateManager** - Singleton managing preset lifecycle, persistence, and system sleep prevention
 - **SettingsManager** - Singleton for app preferences and login item management
 - **Sleep Prevention** - Uses `ProcessInfo.beginActivity()` with `idleDisplaySleepDisabled`
-- **Updates** - Sparkle 2 with EdDSA-signed appcast served from GitHub Pages
+- **Updates** - Sparkle 2 with EdDSA-signed appcast served from GitHub Pages (Developer ID build only)
+- **Distribution shells** - `KonaCore` holds all app logic; the `Kona` executable adds Sparkle for direct distribution, while `KonaAppStore` is the sandboxed Mac App Store variant. The App Store build triggers "Sleep at the end" via an Apple Event to System Events (`pmset` is unavailable in the sandbox) and has no Updates section in Settings
 
 ## Scripts
 
 | Script | Description |
 |--------|-------------|
-| `Scripts/bundle.sh` | Package the release build into `build/Kona.app` |
+| `Scripts/bundle.sh` | Package the release build into `build/Kona.app` (Developer ID + Sparkle) |
 | `Scripts/release.sh` | Build, sign, notarize (App Store Connect API), update the appcast, and publish a GitHub release |
+| `Scripts/bundle-mas.sh` | Package the sandboxed App Store build into `build/mas/Kona.app` |
+| `Scripts/release-mas.sh` | Sign with Apple Distribution, build the installer pkg, and upload to App Store Connect |
 | `Scripts/generate_icon.swift` | Regenerate the app icon |
 
 ## Releasing
@@ -121,6 +122,20 @@ Shipping a release is three steps:
 The script builds, signs (Developer ID, hardened runtime), notarizes and staples via the App Store Connect API, regenerates `docs/appcast.xml` with an EdDSA signature, publishes the GitHub release with the zip, and pushes the appcast — GitHub Pages then serves it to existing installs.
 
 One-time machine prerequisites (already provisioned for this project): the Developer ID Application identity and Sparkle EdDSA private key in the login Keychain, a `kona-notary` notarytool keychain profile, and an authenticated `gh` CLI.
+
+### Mac App Store channel (disabled by feature flag)
+
+The App Store shell is developed dual-track but not released: default builds produce only the Developer ID app, and `release-mas.sh` refuses to run. Everything App Store–specific is gated behind `KONA_MAS=1`:
+
+```bash
+# Build and package the App Store shell during development
+KONA_MAS=1 swift build -c release
+KONA_MAS=1 bash Scripts/bundle-mas.sh
+```
+
+When the channel goes live, run `KONA_MAS=1 Scripts/release-mas.sh` after the Developer ID release to ship the same version to the App Store. The release script builds the sandboxed `KonaAppStore` shell, signs it with the Apple Distribution identity and `Scripts/KonaAppStore.entitlements`, embeds the provisioning profile, packages an installer pkg, and uploads it to App Store Connect (then select the build and submit for review there). The App Store release owns no git tag — versioning follows the Developer ID release.
+
+One-time prerequisites for this channel (not yet provisioned): Apple Distribution and Mac Installer Distribution certificates, a Mac App Store provisioning profile for `io.binoio.Kona` at `Scripts/KonaAppStore.provisionprofile` (git-ignored), an App Store Connect API key with the App Manager role (`KONA_ASC_KEY_ID`/`KONA_ASC_ISSUER_ID`, `.p8` in `~/.appstoreconnect/private_keys/`), and an app record for `io.binoio.Kona` in App Store Connect. Note: the sandboxed build's "Sleep at the end" uses an Apple Events entitlement exception that App Review may question; if rejected, remove the entitlement and hide the toggle in the App Store shell.
 
 ## License
 

@@ -15,6 +15,7 @@ DerivedData/
 
 # Build artifacts
 Kona.app/
+build/
 
 # AI/Agent instructions
 .github/copilot-instructions.md
@@ -39,3 +40,4 @@ ai-instructions.md
 AI_INSTRUCTIONS.md
 INSTRUCTIONS.md
 GEMINI.md
+Scripts/KonaAppStore.provisionprofile

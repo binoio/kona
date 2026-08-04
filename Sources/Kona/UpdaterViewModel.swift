@@ -53,3 +53,27 @@ struct CheckForUpdatesView: View {
         .disabled(!viewModel.canCheckForUpdates)
     }
 }
+
+struct UpdatesSectionView: View {
+    @ObservedObject var viewModel: UpdaterViewModel
+
+    var body: some View {
+        Section("Updates") {
+            Toggle("Automatically check for updates", isOn: Binding(
+                get: { viewModel.automaticallyChecksForUpdates },
+                set: { viewModel.automaticallyChecksForUpdates = $0 }
+            ))
+            Toggle("Automatically download updates", isOn: Binding(
+                get: { viewModel.automaticallyDownloadsUpdates },
+                set: { viewModel.automaticallyDownloadsUpdates = $0 }
+            ))
+            .disabled(!viewModel.automaticallyChecksForUpdates)
+
+            if let lastCheck = viewModel.lastUpdateCheckDate {
+                Text("Last checked: \(lastCheck.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}

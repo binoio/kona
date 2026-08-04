@@ -9,8 +9,8 @@ import Foundation
 import Combine
 import AppKit
 
-class WakeStateManager: ObservableObject {
-    static let shared = WakeStateManager()
+public class WakeStateManager: ObservableObject {
+    public static let shared = WakeStateManager()
     
     @Published var wakeStates: [WakeState] = []
     @Published var currentEnabled: WakeState?
@@ -23,8 +23,10 @@ class WakeStateManager: ObservableObject {
     private var timer: Timer?
     private let saveKey = "wakeStates"
 
-    // Injectable so tests can observe the sleep trigger without sleeping the machine
-    var triggerSystemSleep: () -> Void = {
+    // Injectable so tests can observe the sleep trigger without sleeping the
+    // machine, and so the sandboxed App Store shell can swap in an Apple
+    // Event to System Events (pmset is denied inside the sandbox)
+    public var triggerSystemSleep: () -> Void = {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
         task.arguments = ["sleepnow"]
@@ -48,6 +50,15 @@ class WakeStateManager: ObservableObject {
             // alongside a fixed duration; the schedule now implies the duration.
             for state in states where state.schedule != nil {
                 state.duration = .scheduled
+            }
+            // isEnabled is persisted, but a fresh launch holds no sleep
+            // assertion and no currentEnabled — a stale flag shows a checked
+            // menu item over an inactive icon while nothing keeps the Mac
+            // awake. Start from a clean slate; checkSchedules() re-activates
+            // in-window scheduled presets immediately.
+            for state in states where state.isEnabled {
+                state.isEnabled = false
+                state.enabledAt = nil
             }
             wakeStates = states
         }
@@ -88,8 +99,8 @@ class WakeStateManager: ObservableObject {
         saveWakeStates()
         updateSystemSleep()
         // Refresh the menu and icon so UI reflects current state
-        (NSApp.delegate as? AppDelegate)?.setupMenuBar()
-        (NSApp.delegate as? AppDelegate)?.updateMenuBarIcon()
+        (NSApp.delegate as? KonaAppDelegate)?.setupMenuBar()
+        (NSApp.delegate as? KonaAppDelegate)?.updateMenuBarIcon()
     }
     
     func disableWakeState(_ state: WakeState) {
@@ -101,8 +112,8 @@ class WakeStateManager: ObservableObject {
         saveWakeStates()
         updateSystemSleep()
         // Refresh the menu and icon so UI reflects current state
-        (NSApp.delegate as? AppDelegate)?.setupMenuBar()
-        (NSApp.delegate as? AppDelegate)?.updateMenuBarIcon()
+        (NSApp.delegate as? KonaAppDelegate)?.setupMenuBar()
+        (NSApp.delegate as? KonaAppDelegate)?.updateMenuBarIcon()
     }
     
     func addWakeState(_ state: WakeState) {
@@ -111,7 +122,7 @@ class WakeStateManager: ObservableObject {
         // Make the newly added state the selected one in the UI
         selectedWakeState = state
         // Refresh menubar so any UI reflects changes
-        (NSApp.delegate as? AppDelegate)?.setupMenuBar()
+        (NSApp.delegate as? KonaAppDelegate)?.setupMenuBar()
     }
     
     func deleteWakeState(_ state: WakeState) {
@@ -162,6 +173,9 @@ class WakeStateManager: ObservableObject {
     }
     
     private func startSchedulingTimer() {
+        // Reconcile immediately so a launch inside a scheduled window
+        // activates the preset now, not up to a minute later
+        checkSchedules()
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.checkSchedules()
             self?.checkDurations()

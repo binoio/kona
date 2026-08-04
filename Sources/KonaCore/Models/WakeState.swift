@@ -41,6 +41,26 @@ class WakeState: Identifiable, Codable, ObservableObject, Hashable {
         self.enabledAt = nil
     }
     
+    /// Seconds until this state deactivates, or nil when it has no fixed end
+    /// (Indefinite, or a Scheduled preset with no schedule). For Scheduled
+    /// presets this counts down to the end of today's window.
+    func remainingTime(at now: Date = Date()) -> TimeInterval? {
+        if let duration = duration.timeInterval, let enabledAt = enabledAt {
+            return max(0, duration - now.timeIntervalSince(enabledAt))
+        }
+        if duration == .scheduled, let schedule = schedule {
+            let calendar = Calendar.current
+            let end = calendar.dateComponents([.hour, .minute], from: schedule.endTime)
+            guard let endDate = calendar.date(bySettingHour: end.hour ?? 0, minute: end.minute ?? 0,
+                                              second: 0, of: now) else { return nil }
+            // The schedule check keeps the preset active through the entire
+            // end minute (current <= end), so the window really closes at
+            // endTime + 60s; count down to that moment.
+            return max(0, endDate.addingTimeInterval(60).timeIntervalSince(now))
+        }
+        return nil
+    }
+
     static func == (lhs: WakeState, rhs: WakeState) -> Bool {
         lhs.id == rhs.id
     }

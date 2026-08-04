@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import Kona
+@testable import KonaCore
 
 final class SettingsManagerTests: XCTestCase {
     var settings: SettingsManager!

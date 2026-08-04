@@ -4,7 +4,7 @@
 //
 
 import XCTest
-@testable import Kona
+@testable import KonaCore
 
 final class DefaultsMigratorTests: XCTestCase {
     private let sourceSuite = "test.kona.migrator.source"

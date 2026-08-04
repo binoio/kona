@@ -6,11 +6,11 @@
 //
 
 import XCTest
-@testable import Kona
+@testable import KonaCore
 
 final class IntegrationTests: XCTestCase {
     var manager: WakeStateManager!
-    var appDelegate: AppDelegate!
+    var appDelegate: KonaAppDelegate!
     
     override func setUp() {
         super.setUp()
@@ -22,7 +22,7 @@ final class IntegrationTests: XCTestCase {
         SettingsManager.shared.hideDockIcon = false
         SettingsManager.shared.showMenuBarItem = true
         SettingsManager.shared.showRemainingTimeInMenuBar = false
-        appDelegate = AppDelegate()
+        appDelegate = KonaAppDelegate()
         NSApp.delegate = appDelegate
         appDelegate.setupMenuBar()
         // Reset launch wake state setting
@@ -164,7 +164,7 @@ final class IntegrationTests: XCTestCase {
     
     func testStatusMenuAutoUpdatesWhenStateAdded() {
         // This test verifies the menu automatically updates when a state is added
-        // The AppDelegate must have its observers set up via applicationDidFinishLaunching
+        // The KonaAppDelegate must have its observers set up via applicationDidFinishLaunching
         
         // Ensure observers are set up (simulates real app behavior)
         appDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
@@ -275,9 +275,9 @@ final class IntegrationTests: XCTestCase {
         XCTAssertNil(manager.currentEnabled)
         
         // Simulate app launch
-        let newAppDelegate = AppDelegate()
-        NSApp.delegate = newAppDelegate
-        newAppDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        let newKonaAppDelegate = KonaAppDelegate()
+        NSApp.delegate = newKonaAppDelegate
+        newKonaAppDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
         
         // Verify the state is now enabled
         let enabledState = manager.wakeStates.first(where: { $0.id == launchState.id })
@@ -348,9 +348,9 @@ final class IntegrationTests: XCTestCase {
         let scheduled = manager.addPreset(duration: .scheduled)
         SettingsManager.shared.launchWakeStateId = scheduled.id
 
-        let newAppDelegate = AppDelegate()
-        NSApp.delegate = newAppDelegate
-        newAppDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        let newKonaAppDelegate = KonaAppDelegate()
+        NSApp.delegate = newKonaAppDelegate
+        newKonaAppDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
 
         XCTAssertFalse(scheduled.isEnabled, "Scheduled presets must not activate at launch")
         XCTAssertNil(manager.currentEnabled)
@@ -394,9 +394,9 @@ final class IntegrationTests: XCTestCase {
         manager.addWakeState(state)
         
         // Simulate app launch
-        let newAppDelegate = AppDelegate()
-        NSApp.delegate = newAppDelegate
-        newAppDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        let newKonaAppDelegate = KonaAppDelegate()
+        NSApp.delegate = newKonaAppDelegate
+        newKonaAppDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
         
         // Verify no state is enabled
         XCTAssertNil(manager.currentEnabled, "No wake state should be enabled when launch state is not configured")

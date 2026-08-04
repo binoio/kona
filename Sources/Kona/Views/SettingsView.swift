@@ -41,7 +41,8 @@ struct SettingsView: View {
 
                     Picker("Activate on launch", selection: $settings.launchWakeStateId) {
                         Text("None").tag(nil as UUID?)
-                        ForEach(wakeStateManager.wakeStates) { state in
+                        // Scheduled presets activate on their schedule only
+                        ForEach(wakeStateManager.wakeStates.filter { $0.duration != .scheduled }) { state in
                             Text(state.name).tag(state.id as UUID?)
                         }
                     }

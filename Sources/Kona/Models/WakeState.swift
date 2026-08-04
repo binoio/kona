@@ -8,10 +8,11 @@ enum WakeDuration: String, Codable, CaseIterable {
     case twoHours = "2 Hours"
     case fourHours = "4 Hours"
     case eightHours = "8 Hours"
-    
+    case scheduled = "Scheduled"
+
     var timeInterval: TimeInterval? {
         switch self {
-        case .indefinite: return nil
+        case .indefinite, .scheduled: return nil
         case .fifteenMinutes: return 15 * 60
         case .thirtyMinutes: return 30 * 60
         case .oneHour: return 60 * 60
@@ -57,6 +58,21 @@ class WakeState: Identifiable, Codable, ObservableObject, Hashable {
     struct StateOptions: Codable {
         var allowScreenDim: Bool
         var allowSystemLock: Bool
+        var sleepAtEnd: Bool
+
+        init(allowScreenDim: Bool, allowSystemLock: Bool, sleepAtEnd: Bool = false) {
+            self.allowScreenDim = allowScreenDim
+            self.allowSystemLock = allowSystemLock
+            self.sleepAtEnd = sleepAtEnd
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            allowScreenDim = try container.decode(Bool.self, forKey: .allowScreenDim)
+            allowSystemLock = try container.decode(Bool.self, forKey: .allowSystemLock)
+            // Presets saved before this option existed default to no sleep
+            sleepAtEnd = try container.decodeIfPresent(Bool.self, forKey: .sleepAtEnd) ?? false
+        }
     }
 }
 

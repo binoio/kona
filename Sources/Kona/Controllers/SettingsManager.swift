@@ -51,13 +51,16 @@ class SettingsManager: ObservableObject {
         }
     }
     
-    private init() {
+    init() {
         showMenuBarItem = UserDefaults.standard.bool(forKey: "showMenuBarItem")
         if UserDefaults.standard.object(forKey: "showMenuBarItem") == nil {
             showMenuBarItem = true
         }
         hideDockIcon = UserDefaults.standard.bool(forKey: "hideDockIcon")
         showRemainingTimeInMenuBar = UserDefaults.standard.bool(forKey: "showRemainingTimeInMenuBar")
+        if UserDefaults.standard.object(forKey: "showRemainingTimeInMenuBar") == nil {
+            showRemainingTimeInMenuBar = true
+        }
         openAtLogin = UserDefaults.standard.bool(forKey: "openAtLogin")
         hasLaunched = UserDefaults.standard.bool(forKey: "hasLaunched")
         if let idString = UserDefaults.standard.string(forKey: "launchWakeStateId") {

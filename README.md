@@ -1,6 +1,6 @@
 # Kona
 
-A macOS menu bar app that prevents system sleep using configurable "Wake States."
+A macOS menu bar app that prevents system sleep using configurable Presets.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)
@@ -8,50 +8,51 @@ A macOS menu bar app that prevents system sleep using configurable "Wake States.
 
 ## Features
 
-- **Wake States** - Create named profiles to keep your Mac awake with custom settings
-- **Flexible Durations** - Choose from 15 min, 30 min, 1hr, 2hr, 4hr, 8hr, or indefinite
-- **Screen & Lock Control** - Independently control screen dimming and system lock
-- **Scheduling** - Set recurring schedules with specific days and time windows
-- **Menu Bar Integration** - Quick toggle from the menu bar (cup icon)
-- **Launch Options** - Open at login and auto-activate wake states on launch
+- **Presets** - Keep your Mac awake for 15 min, 30 min, 1hr, 2hr, 4hr, 8hr, indefinitely, or on a schedule
+- **Scheduled Presets** - Recurring day and time windows that activate automatically
+- **Screen & Lock Control** - Independently allow screen dimming and system lock per preset
+- **Sleep at the End** - Optionally put the Mac to sleep when a timed preset expires
+- **Menu Bar Integration** - Quick toggle and remaining-time countdown from the menu bar (cup icon)
+- **Launch Options** - Open at login and auto-activate a preset on launch
+- **Automatic Updates** - Built-in updates via Sparkle, configurable in Settings
 
 ## Installation
 
 ### Download
 
-Download the latest release from the [Releases](https://github.com/mabino/kona/releases) page.
+Download the latest release from the [Releases](https://github.com/binoio/kona/releases) page, or from [the Kona site](https://binoio.github.io/kona/). Kona keeps itself up to date via Sparkle once installed.
 
 ### Build from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/mabino/kona.git
+git clone https://github.com/binoio/kona.git
 cd kona
 
 # Build
 swift build --configuration release
 
 # Create app bundle
-./Scripts/build.sh
+./Scripts/bundle.sh
 ```
 
-The app bundle will be created at `.build/arm64-apple-macosx/release/Kona.app`.
+The app bundle will be created at `build/Kona.app`.
 
 ## Usage
 
 1. **Launch Kona** - The coffee cup icon appears in your menu bar
-2. **Create a Wake State** - Click the + button to add a new wake state
+2. **Create a Preset** - Click the + button in the Kona Library and choose a duration
 3. **Configure Settings**:
-   - Set a duration or choose indefinite
-   - Toggle "Allow Screen Dim" to control display sleep
-   - Toggle "Allow System Lock" to control Mac lock
-   - Optionally set a recurring schedule
-4. **Activate** - Click the power button next to a wake state to enable it
+   - Toggle "Allow screen dim" to control display sleep
+   - Toggle "Allow system lock" to control Mac lock
+   - For timed presets, optionally enable "Sleep at the end"
+   - For Scheduled presets, pick the days and time window
+4. **Activate** - Click the power button next to a preset to enable it (Scheduled presets activate themselves)
 
 ### Menu Bar Icon
 
-- ☕ **Filled cup** - A wake state is active
-- ☕ **Outline cup** - All wake states disabled
+- ☕ **Filled cup** - A preset is active
+- ☕ **Outline cup** - All presets disabled
 
 ## Development
 
@@ -84,28 +85,30 @@ kona/
 ├── Package.swift           # Swift Package Manager manifest
 ├── Sources/Kona/
 │   ├── KonaApp.swift       # App entry point
-│   ├── Controllers/        # WakeStateManager, SettingsManager
+│   ├── Controllers/        # WakeStateManager, SettingsManager, UpdaterViewModel
 │   ├── Models/             # WakeState, Schedule, etc.
 │   └── Views/              # SwiftUI views
 ├── Tests/KonaTests/        # Unit tests
-├── Scripts/                # Build, test, and release scripts
+├── Scripts/                # Bundle and release scripts
+├── ReleaseNotes/           # Per-release notes (Markdown + appcast HTML)
+├── docs/                   # GitHub Pages site and Sparkle appcast
 └── Resources/              # App icon and assets
 ```
 
 ### Architecture
 
-- **WakeStateManager** - Singleton managing wake state lifecycle, persistence, and system sleep prevention
+- **WakeStateManager** - Singleton managing preset lifecycle, persistence, and system sleep prevention
 - **SettingsManager** - Singleton for app preferences and login item management
 - **Sleep Prevention** - Uses `ProcessInfo.beginActivity()` with `idleDisplaySleepDisabled`
+- **Updates** - Sparkle 2 with EdDSA-signed appcast served from GitHub Pages
 
 ## Scripts
 
 | Script | Description |
 |--------|-------------|
-| `build.sh` | Build release and create app bundle |
-| `test.sh` | Run test suite |
-| `notarize.sh` | Code sign and notarize for distribution |
-| `release.sh` | Build, notarize, and publish release to GitHub |
+| `Scripts/bundle.sh` | Package the release build into `build/Kona.app` |
+| `Scripts/release.sh` | Build, sign, notarize (App Store Connect API), update the appcast, and publish a GitHub release |
+| `Scripts/generate_icon.swift` | Regenerate the app icon |
 
 ## License
 

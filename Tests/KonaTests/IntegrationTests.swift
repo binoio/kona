@@ -39,9 +39,9 @@ final class IntegrationTests: XCTestCase {
         XCTAssertFalse(manager.wakeStates.first(where: { $0.name == "Indefinite" })!.isEnabled)
     }
     
-    func testNewWakeStateFromMenu() {
+    func testNewPresetAddsWakeState() {
         let initialCount = manager.wakeStates.count
-        appDelegate.newWakeState()
+        manager.addPreset(duration: .thirtyMinutes)
         XCTAssertEqual(manager.wakeStates.count, initialCount + 1)
     }
 
@@ -51,8 +51,8 @@ final class IntegrationTests: XCTestCase {
         XCTAssertNotNil(manager.selectedWakeState)
         manager.duplicateWakeState(state)
         // After duplication, selectedWakeState should point to newly created duplicate
-        XCTAssertEqual(manager.selectedWakeState?.name, "ToDuplicate (Copy 1)")
-        XCTAssertEqual(manager.wakeStates.last?.name, "ToDuplicate (Copy 1)")
+        XCTAssertEqual(manager.selectedWakeState?.name, "ToDuplicate (1)")
+        XCTAssertEqual(manager.wakeStates.last?.name, "ToDuplicate (1)")
     }
     
     func testMenubarIconChangesWhenWakeStateEnabled() {
@@ -142,6 +142,7 @@ final class IntegrationTests: XCTestCase {
         let menuItems = appDelegate.statusItem?.menu?.items ?? []
         let wakeStateItems = menuItems.filter {
             !$0.isSeparatorItem &&
+            $0.title != "Check for Updates\u{2026}" &&
             $0.title != "Open Kona Library" &&
             $0.title != "Settings..." &&
             $0.title != "Quit Kona"
@@ -172,6 +173,7 @@ final class IntegrationTests: XCTestCase {
         let initialItems = appDelegate.statusItem?.menu?.items ?? []
         let initialWakeStateCount = initialItems.filter {
             !$0.isSeparatorItem &&
+            $0.title != "Check for Updates\u{2026}" &&
             $0.title != "Open Kona Library" &&
             $0.title != "Settings..." &&
             $0.title != "Quit Kona"
@@ -192,6 +194,7 @@ final class IntegrationTests: XCTestCase {
         let updatedItems = appDelegate.statusItem?.menu?.items ?? []
         let updatedWakeStateCount = updatedItems.filter {
             !$0.isSeparatorItem &&
+            $0.title != "Check for Updates\u{2026}" &&
             $0.title != "Open Kona Library" &&
             $0.title != "Settings..." &&
             $0.title != "Quit Kona"
@@ -205,6 +208,19 @@ final class IntegrationTests: XCTestCase {
         XCTAssertTrue(hasNewState, "Newly added wake state should appear in menu automatically")
     }
 
+    func testSetupMenuBarReusesStatusItem() {
+        appDelegate.setupMenuBar()
+        let originalItem = appDelegate.statusItem
+        XCTAssertNotNil(originalItem)
+
+        // Any manager change (including sidebar selection) re-runs setupMenuBar;
+        // recreating the status item each time makes the menu bar icon flicker
+        appDelegate.setupMenuBar()
+        appDelegate.setupMenuBar()
+        XCTAssertTrue(appDelegate.statusItem === originalItem,
+                      "setupMenuBar must reuse the existing status item, not recreate it")
+    }
+
     func testStatusMenuIncludesSettingsItem() {
         let menuItems = appDelegate.statusItem?.menu?.items ?? []
 
@@ -216,6 +232,34 @@ final class IntegrationTests: XCTestCase {
 
         XCTAssertEqual(appDelegate.settingsWindow?.title, "Kona Settings")
         XCTAssertTrue(appDelegate.settingsWindow?.isVisible ?? false)
+    }
+
+    func testSettingsWindowReopensAfterClose() {
+        appDelegate.openSettingsFromMenu()
+        XCTAssertFalse(appDelegate.settingsWindow?.isReleasedWhenClosed ?? true,
+                       "Settings window must survive close; NSWindow self-releases on close by default and reopening would crash")
+
+        appDelegate.settingsWindow?.close()
+        appDelegate.openSettingsFromMenu()
+        XCTAssertTrue(appDelegate.settingsWindow?.isVisible ?? false, "Settings window should reopen after being closed")
+    }
+
+    func testShowLibraryPresentsRegisteredWindowWithoutCreatingAnother() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        appDelegate.libraryWindow = window
+
+        let windowCountBefore = NSApp.windows.count
+        appDelegate.showLibrary()
+
+        XCTAssertTrue(window.isVisible, "showLibrary should present the registered Library window")
+        XCTAssertEqual(NSApp.windows.count, windowCountBefore, "showLibrary must not create a second Library window")
+        window.close()
     }
     
     func testLaunchWakeStateActivatesOnLaunch() {
@@ -279,6 +323,68 @@ final class IntegrationTests: XCTestCase {
         XCTAssertEqual(appDelegate.statusItem?.button?.title, "", "Menu bar title should be empty when setting is disabled")
     }
     
+    func testScheduledPresetMenuItemNotToggleable() {
+        let scheduled = manager.addPreset(duration: .scheduled)
+        appDelegate.setupMenuBar()
+
+        guard let item = appDelegate.statusItem?.menu?.items.first(where: { $0.title == scheduled.name }) else {
+            XCTFail("Scheduled preset should still be listed in the menu for status")
+            return
+        }
+        XCTAssertNil(item.action, "Scheduled presets must not be manually toggleable from the menu bar")
+    }
+
+    func testToggleWakeStateIgnoresScheduledPreset() {
+        let scheduled = manager.addPreset(duration: .scheduled)
+        let item = NSMenuItem(title: scheduled.name, action: nil, keyEquivalent: "")
+        item.representedObject = scheduled.id
+
+        appDelegate.toggleWakeState(item)
+        XCTAssertFalse(scheduled.isEnabled, "Scheduled presets must not be manually activatable")
+        XCTAssertNil(manager.currentEnabled)
+    }
+
+    func testLaunchActivationSkipsScheduledPreset() {
+        let scheduled = manager.addPreset(duration: .scheduled)
+        SettingsManager.shared.launchWakeStateId = scheduled.id
+
+        let newAppDelegate = AppDelegate()
+        NSApp.delegate = newAppDelegate
+        newAppDelegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+
+        XCTAssertFalse(scheduled.isEnabled, "Scheduled presets must not activate at launch")
+        XCTAssertNil(manager.currentEnabled)
+    }
+
+    func testLibraryWindowVisibilityTracksOpenAndClose() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        appDelegate.registerLibraryWindow(window)
+        XCTAssertFalse(manager.libraryWindowVisible, "An unshown Library window should not report as visible")
+
+        appDelegate.showLibrary()
+        XCTAssertTrue(manager.libraryWindowVisible, "Presenting the Library window should mark it visible")
+
+        window.close()
+        XCTAssertFalse(manager.libraryWindowVisible, "Closing the Library window should mark it not visible, disabling Duplicate/Delete")
+    }
+
+    func testAppKeepsRunningAfterLastWindowCloses() {
+        XCTAssertFalse(appDelegate.applicationShouldTerminateAfterLastWindowClosed(NSApp),
+                       "Closing the Library window must not quit the menu bar app")
+    }
+
+    func testDeleteClearsSelection() {
+        let state = manager.addPreset(duration: .oneHour)
+        XCTAssertEqual(manager.selectedWakeState?.id, state.id)
+        manager.deleteWakeState(state)
+        XCTAssertNil(manager.selectedWakeState)
+    }
+
     func testNoLaunchWakeStateWhenNotConfigured() {
         // Ensure no launch wake state is configured
         SettingsManager.shared.launchWakeStateId = nil

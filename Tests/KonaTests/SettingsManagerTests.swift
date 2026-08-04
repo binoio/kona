@@ -20,6 +20,16 @@ final class SettingsManagerTests: XCTestCase {
         settings.showRemainingTimeInMenuBar = false
     }
     
+    func testShowRemainingTimeDefaultsToTrue() {
+        let savedValue = UserDefaults.standard.object(forKey: "showRemainingTimeInMenuBar")
+        UserDefaults.standard.removeObject(forKey: "showRemainingTimeInMenuBar")
+        defer { UserDefaults.standard.set(savedValue, forKey: "showRemainingTimeInMenuBar") }
+
+        let freshSettings = SettingsManager()
+        XCTAssertTrue(freshSettings.showRemainingTimeInMenuBar,
+                      "Show remaining time in menu bar should be enabled by default")
+    }
+
     func testShowRemainingTimeToggle() {
         XCTAssertFalse(settings.showRemainingTimeInMenuBar)
         settings.showRemainingTimeInMenuBar = true

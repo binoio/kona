@@ -16,10 +16,24 @@ class WakeStateManager: ObservableObject {
     @Published var currentEnabled: WakeState?
     @Published var selectedWakeState: WakeState?
     @Published var sidebarVisible: Bool = true
+    @Published var showingNewPresetPrompt: Bool = false
+    @Published var libraryWindowVisible: Bool = false
     
     private var activity: NSObjectProtocol?
     private var timer: Timer?
     private let saveKey = "wakeStates"
+
+    // Injectable so tests can observe the sleep trigger without sleeping the machine
+    var triggerSystemSleep: () -> Void = {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        task.arguments = ["sleepnow"]
+        do {
+            try task.run()
+        } catch {
+            print("Failed to trigger system sleep: \(error)")
+        }
+    }
     
     init() {
         loadWakeStates()
@@ -30,6 +44,11 @@ class WakeStateManager: ObservableObject {
     func loadWakeStates() {
         if let data = UserDefaults.standard.data(forKey: saveKey),
            let states = try? JSONDecoder().decode([WakeState].self, from: data) {
+            // Presets saved before the Scheduled duration existed carried a schedule
+            // alongside a fixed duration; the schedule now implies the duration.
+            for state in states where state.schedule != nil {
+                state.duration = .scheduled
+            }
             wakeStates = states
         }
     }
@@ -97,6 +116,9 @@ class WakeStateManager: ObservableObject {
     
     func deleteWakeState(_ state: WakeState) {
         wakeStates.removeAll { $0.id == state.id }
+        if selectedWakeState?.id == state.id {
+            selectedWakeState = nil
+        }
         if currentEnabled?.id == state.id {
             currentEnabled = nil
             updateSystemSleep()
@@ -104,50 +126,39 @@ class WakeStateManager: ObservableObject {
         saveWakeStates()
     }
     
-    func duplicateWakeState(_ state: WakeState) {
-        // Determine the root/base name (strip existing " (Copy N)" suffix if present)
-        let copySuffixRegex = try? NSRegularExpression(pattern: "\\s\\(Copy(?: \\d+)?\\)$", options: [])
-        var base = state.name
-        if let regex = copySuffixRegex {
-            let range = NSRange(base.startIndex..<base.endIndex, in: base)
-            if let match = regex.firstMatch(in: base, options: [], range: range) {
-                if let r = Range(match.range, in: base) {
-                    base = String(base[..<r.lowerBound])
-                }
-            }
-        }
-
-        // Generate a unique copy name like "Name (Copy 1)", "Name (Copy 2)" ...
-        let pattern = "^" + NSRegularExpression.escapedPattern(for: base) + " \\(Copy(?: (\\d+))?\\)$"
-        var maxIndex = 0
-        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
-            for s in wakeStates {
-                let name = s.name
-                let range = NSRange(name.startIndex..<name.endIndex, in: name)
-                if let match = regex.firstMatch(in: name, options: [], range: range) {
-                    if match.numberOfRanges >= 2 {
-                        let groupRange = match.range(at: 1)
-                        if groupRange.location != NSNotFound, let r = Range(groupRange, in: name) {
-                            let numStr = String(name[r])
-                            if let num = Int(numStr) {
-                                maxIndex = max(maxIndex, num)
-                            } else {
-                                maxIndex = max(maxIndex, 1)
-                            }
-                        } else {
-                            maxIndex = max(maxIndex, 1)
-                        }
-                    }
-                }
-            }
-        }
-        let newIndex = maxIndex + 1
-        let newName = "\(base) (Copy \(newIndex))"
-        // Create a new WakeState instance rather than mutating the existing one
-        let newState = WakeState(name: newName, isEnabled: false, schedule: state.schedule, options: state.options, duration: state.duration)
+    /// Creates a preset for the given duration, named after the duration
+    /// with " (1)", " (2)" appended when the name is already taken.
+    @discardableResult
+    func addPreset(duration: WakeDuration) -> WakeState {
+        let schedule: WakeState.Schedule? = duration == .scheduled
+            ? WakeState.Schedule(days: [], startTime: Date(), endTime: Date().addingTimeInterval(3600))
+            : nil
+        let newState = WakeState(
+            name: uniquePresetName(for: duration.rawValue),
+            schedule: schedule,
+            options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false),
+            duration: duration
+        )
         addWakeState(newState)
-        // Select the new duplicated state
-        selectedWakeState = newState
+        return newState
+    }
+
+    func uniquePresetName(for base: String) -> String {
+        let existing = Set(wakeStates.map { $0.name })
+        if !existing.contains(base) { return base }
+        var index = 1
+        while existing.contains("\(base) (\(index))") { index += 1 }
+        return "\(base) (\(index))"
+    }
+
+    func duplicateWakeState(_ state: WakeState) {
+        // Strip an existing " (N)" suffix so copies of copies don't stack suffixes
+        var base = state.name
+        if let range = base.range(of: #" \(\d+\)$"#, options: .regularExpression) {
+            base.removeSubrange(range)
+        }
+        let newState = WakeState(name: uniquePresetName(for: base), isEnabled: false, schedule: state.schedule, options: state.options, duration: state.duration)
+        addWakeState(newState)
     }
     
     private func startSchedulingTimer() {
@@ -157,7 +168,7 @@ class WakeStateManager: ObservableObject {
         }
     }
     
-    private func checkDurations() {
+    func checkDurations() {
         let now = Date()
         for state in wakeStates {
             if state.isEnabled,
@@ -165,6 +176,9 @@ class WakeStateManager: ObservableObject {
                let duration = state.duration.timeInterval {
                 if now.timeIntervalSince(enabledAt) >= duration {
                     disableWakeState(state)
+                    if state.options.sleepAtEnd {
+                        triggerSystemSleep()
+                    }
                 }
             }
         }

@@ -3,6 +3,36 @@
     <channel>
         <title>Kona</title>
         <item>
+            <title>2.1.0</title>
+            <pubDate>Tue, 04 Aug 2026 18:19:57 -0400</pubDate>
+            <sparkle:version>2.1.0</sparkle:version>
+            <sparkle:shortVersionString>2.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description><![CDATA[<h2>Kona 2.1.0</h2>
+<p>Kona 2.1 makes Scheduled presets dependable across launches and shows their countdown in the menu bar.</p>
+
+<h3>New</h3>
+<ul>
+  <li><b>Scheduled countdown</b> — with "Show remaining time in menu bar" enabled, an active Scheduled preset now counts down to the end of today's window, just like timed presets</li>
+</ul>
+
+<h3>Fixed</h3>
+<ul>
+  <li><b>Scheduled presets activate at launch</b> — launching Kona inside a scheduled window now activates the preset immediately; previously a preset could appear checked while nothing kept the Mac awake</li>
+  <li>Stale "enabled" checkmarks from a previous run are cleared at launch</li>
+</ul>
+
+<h3>Under the hood</h3>
+<ul>
+  <li>Kona's app logic now lives in a shared core with the Developer ID app as a thin shell around it</li>
+</ul>
+
+<p>Requires macOS 14 or later.</p>
+]]></description>
+            <enclosure url="https://github.com/binoio/kona/releases/download/v2.1.0/Kona-2.1.0.zip" length="1620977" type="application/octet-stream" sparkle:edSignature="x/a0LO74LnciMjBD9PBqa53jNDhWVmnfwG8GTOkGv9/W3jRfsZc/Ok1LyQ54vpbmo/kYazPxCwiO8fUU9ZcOAQ=="/>
+        </item>
+        <item>
             <title>2.0.0</title>
             <pubDate>Mon, 03 Aug 2026 22:23:31 -0400</pubDate>
             <sparkle:version>2.0.0</sparkle:version>

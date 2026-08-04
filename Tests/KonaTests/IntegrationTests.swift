@@ -142,6 +142,7 @@ final class IntegrationTests: XCTestCase {
         let menuItems = appDelegate.statusItem?.menu?.items ?? []
         let wakeStateItems = menuItems.filter {
             !$0.isSeparatorItem &&
+            $0.title != "Check for Updates\u{2026}" &&
             $0.title != "Open Kona Library" &&
             $0.title != "Settings..." &&
             $0.title != "Quit Kona"
@@ -172,6 +173,7 @@ final class IntegrationTests: XCTestCase {
         let initialItems = appDelegate.statusItem?.menu?.items ?? []
         let initialWakeStateCount = initialItems.filter {
             !$0.isSeparatorItem &&
+            $0.title != "Check for Updates\u{2026}" &&
             $0.title != "Open Kona Library" &&
             $0.title != "Settings..." &&
             $0.title != "Quit Kona"
@@ -192,6 +194,7 @@ final class IntegrationTests: XCTestCase {
         let updatedItems = appDelegate.statusItem?.menu?.items ?? []
         let updatedWakeStateCount = updatedItems.filter {
             !$0.isSeparatorItem &&
+            $0.title != "Check for Updates\u{2026}" &&
             $0.title != "Open Kona Library" &&
             $0.title != "Settings..." &&
             $0.title != "Quit Kona"

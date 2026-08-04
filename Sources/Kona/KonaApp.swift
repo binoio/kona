@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import Sparkle
 
 @main
 struct KonaApp: App {
@@ -32,6 +33,9 @@ struct KonaApp: App {
                 })
         }
         .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(viewModel: appDelegate.updaterViewModel)
+            }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings...") {
                     appDelegate.showSettings()
@@ -92,10 +96,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var cancellables = Set<AnyCancellable>()
     var displayTimer: Timer?
     private var menuBarIconShowsEnabled: Bool?
+
+    // Lazy and started manually so unit tests (which construct AppDelegate
+    // directly) never spin up Sparkle's scheduled checks
+    lazy var updaterController = SPUStandardUpdaterController(
+        startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
+    lazy var updaterViewModel = UpdaterViewModel(updater: updaterController.updater)
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         SettingsManager.shared.applyDockIconVisibility()
         setupMenuBar()
+        // Only start Sparkle when running from a real bundle with a feed
+        // configured; skips xctest and `swift run`, which have no Info.plist keys
+        if Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil {
+            updaterController.startUpdater()
+        }
         // Observe any changes to WakeStateManager (including item property changes)
         WakeStateManager.shared.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async {
@@ -157,6 +172,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 menu.addItem(item)
             }
             menu.addItem(NSMenuItem.separator())
+            let checkForUpdatesItem = NSMenuItem(title: "Check for Updates…",
+                                                 action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)),
+                                                 keyEquivalent: "")
+            checkForUpdatesItem.target = updaterController
+            menu.addItem(checkForUpdatesItem)
+
             let openLibraryItem = NSMenuItem(title: "Open Kona Library", action: #selector(openLibraryFromMenu), keyEquivalent: "")
             openLibraryItem.target = self
             menu.addItem(openLibraryItem)
@@ -300,9 +321,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showSettings() {
         if settingsWindow == nil {
-            let settingsView = SettingsView()
+            let settingsView = SettingsView(updaterViewModel: updaterViewModel)
             settingsWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 540, height: 440),
+                contentRect: NSRect(x: 0, y: 0, width: 540, height: 540),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false
@@ -313,7 +334,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindow?.center()
             settingsWindow?.contentView = NSHostingView(rootView: settingsView)
             settingsWindow?.title = "Kona Settings"
-            settingsWindow?.setContentSize(NSSize(width: 540, height: 440))
+            settingsWindow?.setContentSize(NSSize(width: 540, height: 540))
         }
         present(window: settingsWindow)
     }

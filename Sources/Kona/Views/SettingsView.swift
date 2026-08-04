@@ -10,6 +10,8 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var settings = SettingsManager.shared
     @ObservedObject var wakeStateManager = WakeStateManager.shared
+    // Optional so tests and previews can construct the view without Sparkle
+    var updaterViewModel: UpdaterViewModel?
 
     private var showDockIconBinding: Binding<Bool> {
         Binding(
@@ -48,10 +50,45 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                 }
+
+                if let updaterViewModel = updaterViewModel {
+                    UpdatesSectionView(viewModel: updaterViewModel)
+                }
             }
             .formStyle(.grouped)
         }
         .padding(24)
-        .frame(width: 520, height: 400)
+        .frame(width: 520, height: updaterViewModel == nil ? 400 : 500)
+    }
+}
+
+struct UpdatesSectionView: View {
+    @ObservedObject var viewModel: UpdaterViewModel
+
+    var body: some View {
+        Section("Updates") {
+            Toggle("Automatically check for updates", isOn: Binding(
+                get: { viewModel.automaticallyChecksForUpdates },
+                set: { viewModel.automaticallyChecksForUpdates = $0 }
+            ))
+            Toggle("Automatically download updates", isOn: Binding(
+                get: { viewModel.automaticallyDownloadsUpdates },
+                set: { viewModel.automaticallyDownloadsUpdates = $0 }
+            ))
+            .disabled(!viewModel.automaticallyChecksForUpdates)
+
+            HStack {
+                if let lastCheck = viewModel.lastUpdateCheckDate {
+                    Text("Last checked: \(lastCheck.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Check Now") {
+                    viewModel.checkForUpdates()
+                }
+                .disabled(!viewModel.canCheckForUpdates)
+            }
+        }
     }
 }

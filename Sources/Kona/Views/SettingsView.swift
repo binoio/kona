@@ -77,17 +77,10 @@ struct UpdatesSectionView: View {
             ))
             .disabled(!viewModel.automaticallyChecksForUpdates)
 
-            HStack {
-                if let lastCheck = viewModel.lastUpdateCheckDate {
-                    Text("Last checked: \(lastCheck.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Check Now") {
-                    viewModel.checkForUpdates()
-                }
-                .disabled(!viewModel.canCheckForUpdates)
+            if let lastCheck = viewModel.lastUpdateCheckDate {
+                Text("Last checked: \(lastCheck.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }

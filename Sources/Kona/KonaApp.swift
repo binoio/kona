@@ -12,7 +12,16 @@ import Sparkle
 @main
 struct KonaApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @ObservedObject private var manager = WakeStateManager.shared
+    @ObservedObject private var manager: WakeStateManager
+
+    init() {
+        // Must run before any singleton reads defaults, or pre-2.0 data
+        // (presets, settings) under com.example.Kona would be ignored.
+        // The manager property is deliberately assigned here, after migration:
+        // a stored-property default would evaluate before this body runs.
+        DefaultsMigrator.migrateIfNeeded()
+        _manager = ObservedObject(wrappedValue: WakeStateManager.shared)
+    }
 
     // Duplicate/Delete act on the Library selection; without the window open
     // the user can't see what they'd be modifying

@@ -18,11 +18,27 @@ if [[ -z "${APP_VERSION:-}" && -f "VERSION" ]]; then
     VERSION=$(tr -d '[:space:]' < VERSION)
 fi
 
+# Sparkle update feed and EdDSA public key (env-overridable for testing)
+SPARKLE_FEED_URL="${SPARKLE_FEED_URL:-https://binoio.github.io/kona/appcast.xml}"
+SPARKLE_ED_PUBLIC_KEY="${SPARKLE_ED_PUBLIC_KEY:-nDAE5HXFYg6pBQbAFtyEObXbHu9N7TM+7zUivRcRqNA=}"
+
 echo "Creating app bundle (version $VERSION)..."
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 # Copy executable
 cp "$BUILD_DIR/$APP_NAME" "$MACOS_DIR/$APP_NAME"
+
+# Embed Sparkle.framework (the executable links it via @rpath/../Frameworks)
+FRAMEWORKS_DIR="$CONTENTS_DIR/Frameworks"
+SPARKLE_FRAMEWORK=$(find .build -type d -name "Sparkle.framework" -path "*artifacts*" -not -path "*dSYM*" | head -1)
+if [[ -z "$SPARKLE_FRAMEWORK" ]]; then
+    echo "error: Sparkle.framework not found under .build; run 'swift build' first" >&2
+    exit 1
+fi
+mkdir -p "$FRAMEWORKS_DIR"
+rm -rf "$FRAMEWORKS_DIR/Sparkle.framework"
+# ditto preserves the framework's Versions symlink structure; cp -R would not
+ditto "$SPARKLE_FRAMEWORK" "$FRAMEWORKS_DIR/Sparkle.framework"
 
 # Copy icon
 if [ -f "Resources/AppIcon.icns" ]; then
@@ -38,7 +54,7 @@ cat > "$CONTENTS_DIR/Info.plist" << EOF
     <key>CFBundleExecutable</key>
     <string>Kona</string>
     <key>CFBundleIdentifier</key>
-    <string>com.example.Kona</string>
+    <string>io.binoio.Kona</string>
     <key>CFBundleName</key>
     <string>Kona</string>
     <key>CFBundleDisplayName</key>
@@ -57,6 +73,10 @@ cat > "$CONTENTS_DIR/Info.plist" << EOF
     <false/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>SUFeedURL</key>
+    <string>$SPARKLE_FEED_URL</string>
+    <key>SUPublicEDKey</key>
+    <string>$SPARKLE_ED_PUBLIC_KEY</string>
 </dict>
 </plist>
 EOF

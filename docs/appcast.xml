@@ -1,0 +1,43 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Kona</title>
+        <item>
+            <title>2.0.0</title>
+            <pubDate>Mon, 03 Aug 2026 22:23:31 -0400</pubDate>
+            <sparkle:version>2.0.0</sparkle:version>
+            <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description><![CDATA[<h2>Kona 2.0.0</h2>
+<p>Kona 2.0 overhauls presets, consolidates the Library, and adds automatic updates.</p>
+
+<h3>New</h3>
+<ul>
+  <li><b>Duration-first presets</b> — create a preset by picking its duration up front; presets are named for their duration ("30 Minutes", with "(1)", "(2)" for duplicates)</li>
+  <li><b>Scheduled presets</b> — a new preset type that activates automatically on chosen days and time windows</li>
+  <li><b>Sleep at the end</b> — timed presets can optionally put the Mac to sleep when their timer expires</li>
+  <li><b>Automatic updates</b> — Kona now updates itself via Sparkle, configurable in Settings → Updates</li>
+</ul>
+
+<h3>Changed</h3>
+<ul>
+  <li>One consolidated Kona Library window; reopen it anytime with ⌘0 or from the menu bar extra</li>
+  <li>Preset renaming and in-place duration editing removed — the duration is the name</li>
+  <li>Remaining time in the menu bar is now shown by default</li>
+  <li>New presets disallow screen dim and system lock by default</li>
+</ul>
+
+<h3>Fixed</h3>
+<ul>
+  <li>Reopening Settings after closing it no longer crashes the app</li>
+  <li>Closing the Library window no longer quits Kona</li>
+  <li>The menu bar icon no longer flickers when clicking between presets</li>
+</ul>
+
+<p>Your existing presets and settings are migrated automatically. Requires macOS 14 or later.</p>
+]]></description>
+            <enclosure url="https://github.com/binoio/kona/releases/download/v2.0.0/Kona-2.0.0.zip" length="1612343" type="application/octet-stream" sparkle:edSignature="DrAhVCayjvRrhoHFvY/3vDQrv/cCENqtOO2H7OmJhy+eJ1q+qatG1n4dDejp82P6i6hIVPqrXJLadC3TFtsGAg=="/>
+        </item>
+    </channel>
+</rss>

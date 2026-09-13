@@ -77,6 +77,7 @@ open class KonaAppDelegate: NSObject, NSApplicationDelegate {
             // the icon flicker in the menu bar; only the menu is rebuilt.
             if statusItem == nil {
                 statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+                statusItem?.button?.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
                 menuBarIconShowsEnabled = nil
             }
 
@@ -168,19 +169,22 @@ open class KonaAppDelegate: NSObject, NSApplicationDelegate {
         if SettingsManager.shared.showRemainingTimeInMenuBar,
            let state = current,
            let remaining = state.remainingTime() {
-            let hours = Int(remaining) / 3600
-            let minutes = (Int(remaining) % 3600) / 60
-            let seconds = Int(remaining) % 60
+            let totalSeconds = max(0, Int(remaining))
+            let hours = min(99, totalSeconds / 3600)
+            let minutes = (totalSeconds % 3600) / 60
+            let seconds = totalSeconds % 60
 
-            let timeString: String
-            if hours > 0 {
-                timeString = String(format: "%d:%02d:%02d", hours, minutes, seconds)
-            } else {
-                timeString = String(format: "%d:%02d", minutes, seconds)
+            button.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+            button.title = String(format: " %02d:%02d:%02d", hours, minutes, seconds)
+            let requiredWidth = button.intrinsicContentSize.width
+            if statusItem?.length != requiredWidth {
+                statusItem?.length = requiredWidth
             }
-            button.title = " \(timeString)"
         } else {
             button.title = ""
+            if statusItem?.length != NSStatusItem.variableLength {
+                statusItem?.length = NSStatusItem.variableLength
+            }
         }
     }
 

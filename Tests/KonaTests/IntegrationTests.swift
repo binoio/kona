@@ -304,6 +304,7 @@ final class IntegrationTests: XCTestCase {
         // 15 minutes = 15:00 or 14:59
         let initialTitle = appDelegate.statusItem?.button?.title ?? ""
         XCTAssertTrue(initialTitle.contains("15:00") || initialTitle.contains("14:59"), "Menu bar title should contain 15:00 or 14:59, got: '\(initialTitle)'")
+        XCTAssertNotEqual(appDelegate.statusItem?.length, NSStatusItem.variableLength, "Status item length should be fixed when displaying remaining time")
         
         // Manually set enabledAt to simulate time passing
         if let idx = manager.wakeStates.firstIndex(where: { $0.id == custom.id }) {
@@ -317,10 +318,86 @@ final class IntegrationTests: XCTestCase {
         let title = appDelegate.statusItem?.button?.title ?? ""
         XCTAssertTrue(title.contains("13:5"), "Menu bar title should show ~13:5x, got: '\(title)'")
         
-        // Disable setting and verify title is cleared
+        // Disable setting and verify title is cleared and length restored to variableLength
         SettingsManager.shared.showRemainingTimeInMenuBar = false
         appDelegate.updateMenuBarIcon()
         XCTAssertEqual(appDelegate.statusItem?.button?.title, "", "Menu bar title should be empty when setting is disabled")
+        XCTAssertEqual(appDelegate.statusItem?.length, NSStatusItem.variableLength, "Status item length should be variableLength when remaining time is disabled")
+    }
+
+    func testTimeRemainingMenuBarWidthIsFixed() {
+        SettingsManager.shared.showRemainingTimeInMenuBar = true
+        let custom = WakeState(name: "FixedDisplayTest", options: WakeState.StateOptions(allowScreenDim: true, allowSystemLock: true), duration: .eightHours)
+        manager.addWakeState(custom)
+        manager.enableWakeState(custom)
+
+        guard let button = appDelegate.statusItem?.button else {
+            XCTFail("Status item button missing")
+            return
+        }
+
+        // Expected width for displaying " 00:00:00" next to the icon
+        let expectedZeroTitle = " 00:00:00"
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        let expectedTextWidth = (expectedZeroTitle as NSString).size(withAttributes: [.font: font]).width
+        let iconWidth = button.image?.size.width ?? 0
+
+        // Check various remaining times: narrow digits (1s), wide digits (0s, 8s), different hour values
+        let simulatedSeconds: [TimeInterval] = [
+            0,                     // 00:00:00
+            1,                     // 00:00:01
+            71,                    // 00:01:11
+            15 * 60,               // 00:15:00
+            3600 + 11 * 60 + 11,   // 01:11:11
+            8 * 3600               // 08:00:00
+        ]
+
+        var measuredLengths: [CGFloat] = []
+        var measuredIntrinsicWidths: [CGFloat] = []
+
+        if let idx = manager.wakeStates.firstIndex(where: { $0.id == custom.id }) {
+            for remaining in simulatedSeconds {
+                // custom duration is 8 hours (28800s); set enabledAt so remaining time is exactly `remaining`
+                let elapsed = (8 * 3600) - remaining
+                manager.wakeStates[idx].enabledAt = Date().addingTimeInterval(-elapsed)
+                manager.currentEnabled = manager.wakeStates[idx]
+                appDelegate.updateMenuBarIcon()
+
+                guard let length = appDelegate.statusItem?.length else {
+                    XCTFail("Status item length should not be nil")
+                    return
+                }
+                measuredLengths.append(length)
+                measuredIntrinsicWidths.append(button.intrinsicContentSize.width)
+            }
+        }
+
+        // All status item lengths must be identical
+        XCTAssertGreaterThan(measuredLengths.count, 1)
+        let firstLength = measuredLengths[0]
+        for len in measuredLengths {
+            XCTAssertEqual(len, firstLength, accuracy: 0.001, "Menu bar status item length must not shift across different time values")
+        }
+
+        // All intrinsic content widths must be identical
+        let firstIntrinsic = measuredIntrinsicWidths[0]
+        for width in measuredIntrinsicWidths {
+            XCTAssertEqual(width, firstIntrinsic, accuracy: 0.001, "Button intrinsic width must not shift across different time values")
+        }
+
+        // Length must be fixed and equal the width needed for 00:00:00 next to the icon, without excess padding
+        XCTAssertEqual(firstLength, firstIntrinsic, accuracy: 0.001)
+        XCTAssertGreaterThan(firstLength, iconWidth + expectedTextWidth - 5)
+        XCTAssertLessThan(firstLength, iconWidth + expectedTextWidth + 15, "Width should not take up any more space than is necessary for displaying 00:00:00 next to the icon")
+
+        // Indefinite wake (nil remaining time) must restore variableLength and not reserve width for 00:00:00
+        if let indefinite = manager.wakeStates.first(where: { $0.name == "Indefinite" }) {
+            manager.enableWakeState(indefinite)
+            appDelegate.updateMenuBarIcon()
+            XCTAssertEqual(appDelegate.statusItem?.length, NSStatusItem.variableLength, "Status item length must be variableLength for Indefinite wake")
+            XCTAssertEqual(button.title, "", "Button title must be empty for Indefinite wake")
+            XCTAssertLessThan(button.intrinsicContentSize.width, firstLength, "Icon-only width must be smaller than remaining time display")
+        }
     }
     
     func testScheduledPresetMenuItemNotToggleable() {

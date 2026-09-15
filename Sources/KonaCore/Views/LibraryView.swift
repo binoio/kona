@@ -98,9 +98,18 @@ struct LibraryView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             List(selection: $manager.selectedWakeState) {
-                ForEach(manager.wakeStates) { s in
+                // Indefinite sits outside the ForEach so it stays first and
+                // can't be dragged, matching its fixed spot in the menu bar
+                if let indefinite = manager.wakeStates.first(where: { $0.name == "Indefinite" }) {
+                    SidebarRow(state: indefinite)
+                        .tag(indefinite)
+                }
+                ForEach(manager.reorderablePresets) { s in
                     SidebarRow(state: s)
                         .tag(s)
+                }
+                .onMove { source, destination in
+                    manager.movePresets(fromOffsets: source, toOffset: destination)
                 }
             }
             .frame(minWidth: 150)

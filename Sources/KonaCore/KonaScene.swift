@@ -77,6 +77,22 @@ public struct KonaCommands: Commands {
             }
             .keyboardShortcut(.delete)
             .disabled(!canModifySelectedPreset)
+            Divider()
+            // Keyboard equivalent of dragging rows in the Library sidebar
+            Button("Move Up") {
+                if canModifySelectedPreset {
+                    manager.moveSelectedPreset(by: -1)
+                }
+            }
+            .keyboardShortcut(.upArrow, modifiers: [.command, .option])
+            .disabled(!canModifySelectedPreset || !manager.canMoveSelectedPreset(by: -1))
+            Button("Move Down") {
+                if canModifySelectedPreset {
+                    manager.moveSelectedPreset(by: 1)
+                }
+            }
+            .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+            .disabled(!canModifySelectedPreset || !manager.canMoveSelectedPreset(by: 1))
         }
         CommandGroup(before: .windowList) {
             Button("Kona Library") {

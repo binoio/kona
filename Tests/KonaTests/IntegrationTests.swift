@@ -478,4 +478,45 @@ final class IntegrationTests: XCTestCase {
         // Verify no state is enabled
         XCTAssertNil(manager.currentEnabled, "No wake state should be enabled when launch state is not configured")
     }
+
+    /// Titles of the preset rows in the status-item menu, in menu order.
+    private func menuPresetTitles() -> [String] {
+        (appDelegate.statusItem?.menu?.items ?? []).filter {
+            !$0.isSeparatorItem &&
+            $0.title != "Check for Updates\u{2026}" &&
+            $0.title != "Open Kona Library" &&
+            $0.title != "Settings..." &&
+            $0.title != "Quit Kona"
+        }.map { $0.title }
+    }
+
+    func testMenuBarOrderFollowsLibraryOrder() {
+        for name in ["Alpha", "Beta", "Gamma"] {
+            manager.addWakeState(WakeState(name: name,
+                                           options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false),
+                                           duration: .indefinite))
+        }
+        appDelegate.setupMenuBar()
+        XCTAssertEqual(menuPresetTitles(), ["Indefinite Wake", "Alpha", "Beta", "Gamma"])
+
+        // Drag Gamma to the top of the reorderable presets
+        manager.movePresets(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        appDelegate.setupMenuBar()
+
+        XCTAssertEqual(menuPresetTitles(), ["Indefinite Wake", "Gamma", "Alpha", "Beta"],
+                       "The menu bar dropdown must present presets in the Library's order")
+    }
+
+    func testIndefiniteStaysFirstInMenuAfterReorder() {
+        manager.addWakeState(WakeState(name: "Alpha",
+                                       options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false),
+                                       duration: .indefinite))
+        // A drag targeting the very top of the reorderable range must not
+        // displace the pinned Indefinite row
+        manager.movePresets(fromOffsets: IndexSet(integer: 0), toOffset: 0)
+        appDelegate.setupMenuBar()
+
+        XCTAssertEqual(manager.wakeStates.first?.name, "Indefinite")
+        XCTAssertEqual(menuPresetTitles().first, "Indefinite Wake")
+    }
 }

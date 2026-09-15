@@ -245,6 +245,67 @@ final class WakeStateManagerTests: XCTestCase {
         XCTAssertEqual(remaining, 10 * 60, accuracy: 2)
     }
 
+    func testMovePresetReordersAndPersists() {
+        for name in ["Alpha", "Beta", "Gamma"] {
+            manager.addWakeState(WakeState(name: name, options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false), duration: .indefinite))
+        }
+        defer { UserDefaults.standard.removeObject(forKey: "wakeStates") }
+
+        manager.movePresets(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        XCTAssertEqual(manager.wakeStates.map { $0.name }, ["Gamma", "Alpha", "Beta"])
+
+        // Order lives in the persisted array, so it must survive a relaunch
+        let relaunched = WakeStateManager()
+        let names = relaunched.wakeStates.filter { $0.name != "Indefinite" }.map { $0.name }
+        XCTAssertEqual(names, ["Gamma", "Alpha", "Beta"], "Preset order must persist across launches")
+    }
+
+    func testMoveCannotDisplacePinnedIndefinite() {
+        manager.createDefaultIndefinite()
+        manager.addWakeState(WakeState(name: "Alpha", options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false), duration: .indefinite))
+        defer { UserDefaults.standard.removeObject(forKey: "wakeStates") }
+
+        manager.movePresets(fromOffsets: IndexSet(integer: 0), toOffset: 0)
+
+        XCTAssertEqual(manager.wakeStates.first?.name, "Indefinite",
+                       "Indefinite is pinned first and must not be reorderable")
+        XCTAssertEqual(manager.reorderablePresets.map { $0.name }, ["Alpha"])
+    }
+
+    func testLoadPinsIndefiniteToFrontForOlderInstalls() {
+        // Installs created before Indefinite was pinned could persist it anywhere
+        let indefinite = WakeState(name: "Indefinite", options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false), duration: .indefinite)
+        let alpha = WakeState(name: "Alpha", options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false), duration: .indefinite)
+        manager.wakeStates = [alpha, indefinite]
+        manager.saveWakeStates()
+        defer { UserDefaults.standard.removeObject(forKey: "wakeStates") }
+
+        let relaunched = WakeStateManager()
+
+        XCTAssertEqual(relaunched.wakeStates.first?.name, "Indefinite")
+        XCTAssertEqual(relaunched.wakeStates.map { $0.name }, ["Indefinite", "Alpha"])
+    }
+
+    func testMoveSelectedPresetClampsAtBothEnds() {
+        for name in ["Alpha", "Beta"] {
+            manager.addWakeState(WakeState(name: name, options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false), duration: .indefinite))
+        }
+        defer { UserDefaults.standard.removeObject(forKey: "wakeStates") }
+
+        manager.selectedWakeState = manager.wakeStates.first { $0.name == "Alpha" }
+        XCTAssertFalse(manager.canMoveSelectedPreset(by: -1), "The top preset can't move up")
+        manager.moveSelectedPreset(by: -1)
+        XCTAssertEqual(manager.wakeStates.map { $0.name }, ["Alpha", "Beta"])
+
+        XCTAssertTrue(manager.canMoveSelectedPreset(by: 1))
+        manager.moveSelectedPreset(by: 1)
+        XCTAssertEqual(manager.wakeStates.map { $0.name }, ["Beta", "Alpha"])
+
+        XCTAssertFalse(manager.canMoveSelectedPreset(by: 1), "The bottom preset can't move down")
+        manager.moveSelectedPreset(by: 1)
+        XCTAssertEqual(manager.wakeStates.map { $0.name }, ["Beta", "Alpha"])
+    }
+
     func testManualDisableDoesNotTriggerSleep() {
         var sleepTriggered = false
         manager.triggerSystemSleep = { sleepTriggered = true }

@@ -8,6 +8,9 @@
 import Foundation
 import Combine
 import AppKit
+// For Array.move(fromOffsets:toOffset:), which matches the offsets SwiftUI's
+// .onMove hands back
+import SwiftUI
 
 public class WakeStateManager: ObservableObject {
     public static let shared = WakeStateManager()
@@ -61,7 +64,18 @@ public class WakeStateManager: ObservableObject {
                 state.enabledAt = nil
             }
             wakeStates = states
+            pinIndefiniteFirst()
         }
+    }
+
+    /// Indefinite is presented first everywhere and can't be reordered;
+    /// keeping it at index 0 lets the reorderable presets be the array's
+    /// tail, so drag offsets need no translation. Older installs may have it
+    /// elsewhere — createDefaultIndefinite used to append.
+    private func pinIndefiniteFirst() {
+        guard let index = wakeStates.firstIndex(where: { $0.name == "Indefinite" }), index != 0 else { return }
+        let indefinite = wakeStates.remove(at: index)
+        wakeStates.insert(indefinite, at: 0)
     }
     
     func saveWakeStates() {
@@ -80,7 +94,7 @@ public class WakeStateManager: ObservableObject {
                 schedule: nil,
                 options: WakeState.StateOptions(allowScreenDim: false, allowSystemLock: false)
             )
-            wakeStates.append(indefinite)
+            wakeStates.insert(indefinite, at: 0)
             saveWakeStates()
         }
     }
@@ -172,6 +186,50 @@ public class WakeStateManager: ObservableObject {
         addWakeState(newState)
     }
     
+    /// Presets the user can reorder: everything after the pinned Indefinite row.
+    var reorderablePresets: [WakeState] {
+        Array(wakeStates.dropFirst(pinnedCount))
+    }
+
+    /// 1 while Indefinite heads the list, 0 in tests that build a manager without it.
+    private var pinnedCount: Int {
+        wakeStates.first?.name == "Indefinite" ? 1 : 0
+    }
+
+    /// Reorders the user's presets. Offsets are relative to
+    /// `reorderablePresets`, so the pinned row is sliced off and restored
+    /// rather than translating indices.
+    func movePresets(fromOffsets source: IndexSet, toOffset destination: Int) {
+        let pinned = pinnedCount
+        var reorderable = Array(wakeStates.dropFirst(pinned))
+        reorderable.move(fromOffsets: source, toOffset: destination)
+        wakeStates = Array(wakeStates.prefix(pinned)) + reorderable
+        saveWakeStates()
+    }
+
+    /// Moves the selected preset one slot up (-1) or down (+1) for the
+    /// keyboard commands; a no-op at either end of the list.
+    func moveSelectedPreset(by delta: Int) {
+        guard let index = selectedReorderableIndex else { return }
+        let target = index + delta
+        guard target >= 0, target < reorderablePresets.count else { return }
+        // Move offsets insert *before* the destination, so moving down needs
+        // one extra to land past the row it displaces
+        movePresets(fromOffsets: IndexSet(integer: index), toOffset: delta > 0 ? target + 1 : target)
+    }
+
+    /// Whether the selection can move in the given direction; drives menu enablement.
+    func canMoveSelectedPreset(by delta: Int) -> Bool {
+        guard let index = selectedReorderableIndex else { return false }
+        let target = index + delta
+        return target >= 0 && target < reorderablePresets.count
+    }
+
+    private var selectedReorderableIndex: Int? {
+        guard let selected = selectedWakeState else { return nil }
+        return reorderablePresets.firstIndex { $0.id == selected.id }
+    }
+
     private func startSchedulingTimer() {
         // Reconcile immediately so a launch inside a scheduled window
         // activates the preset now, not up to a minute later

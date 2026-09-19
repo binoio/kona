@@ -179,6 +179,35 @@
             transform: scale(1.02);
         }
 
+        /* Lightbox effect */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            cursor: zoom-out;
+        }
+
+        .lightbox:target {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox img {
+            width: auto;
+            height: auto;
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: var(--radius);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+
         footer {
             text-align: center;
             padding: 60px 0;
@@ -264,6 +293,31 @@
             <div class="feature-card">
                 <h3>Native Integration</h3>
                 <p>Built with Swift and SwiftUI for macOS 14+. Supports open-at-login and auto-activation.</p>
+            </div>
+        </section>
+
+
+        <section class="screenshots">
+            <h2 style="text-align: center; margin-bottom: 40px;">Screenshots</h2>
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <a href="#img1"><img src="images/main-window.png" alt="Kona main window" loading="lazy"></a>
+                    <div id="img1" class="lightbox" onclick="location.href='#';">
+                        <img src="images/main-window.png" alt="">
+                    </div>
+                </div>
+                <div class="screenshot-item">
+                    <a href="#img2"><img src="images/settings.png" alt="Kona settings" loading="lazy"></a>
+                    <div id="img2" class="lightbox" onclick="location.href='#';">
+                        <img src="images/settings.png" alt="">
+                    </div>
+                </div>
+                <div class="screenshot-item">
+                    <a href="#img3"><img src="images/menubar-extra.png" alt="Kona menu bar extra" loading="lazy"></a>
+                    <div id="img3" class="lightbox" onclick="location.href='#';">
+                        <img src="images/menubar-extra.png" alt="">
+                    </div>
+                </div>
             </div>
         </section>
 
